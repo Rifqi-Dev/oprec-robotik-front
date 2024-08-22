@@ -1,39 +1,41 @@
-# Use PHP 8.1.0 with Apache
-FROM php:8.1.0-apache
+# Use PHP 8.1.0 with FPM on Alpine
+FROM php:8.1.0-fpm-alpine
 
-# Set environment variables to improve Composer's performance and handle network issues
+# Set environment variables for Composer
 ENV COMPOSER_PROCESS_TIMEOUT=2000
 ENV COMPOSER_ALLOW_SUPERUSER=1
 
 # Install necessary packages and extensions
-RUN apt-get update \
-    && apt-get install -y nano zip unzip git libicu-dev ca-certificates iputils-ping \
+RUN apk add --no-cache \
+    nano \
+    zip \
+    unzip \
+    git \
+    curl \
+    openssl \
+    libintl \
+    icu-dev \
     && docker-php-ext-configure intl \
-    && docker-php-ext-install intl \
-    && apt-get install -y libssl-dev \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
-# Configure Git to use OpenSSL instead of GnuTLS
-RUN git config --global http.sslBackend openssl
+    && docker-php-ext-install intl
 
 # Install Composer
-RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/bin --filename=composer \
-    && composer config --global secure-http false \
-    && composer config -g repos.packagist composer https://packagist.org
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/bin --filename=composer
 
 # Set the working directory
 WORKDIR /var/www/html
 
-# Clone the CodeIgniter repository and install dependencies
-RUN git clone https://github.com/codeigniter4/appstarter.git app \
-    && cd app \
+# Download and install CodeIgniter
+RUN curl -L https://github.com/codeigniter4/appstarter/archive/refs/tags/v4.5.4.zip -o appstarter.zip \
+    && unzip appstarter.zip -d /var/www/html \
+    && mv /var/www/html/appstarter-4.5.4 /var/www/html/app \
+    && rm appstarter.zip \
+    && cd /var/www/html/app \
     && composer install --no-progress --no-interaction
 
-# Change ownership of the project files to the Apache user
+# Change ownership of the project files to the www-data user
 RUN chown -R www-data:www-data /var/www/html/app
 
-# Copy Apache virtual host configuration
+# Copy the Apache virtual host configuration (assuming you have a custom config file)
 COPY codeigniter.conf /etc/apache2/sites-available/
 
 # Enable the CodeIgniter site and reload Apache
@@ -49,4 +51,4 @@ RUN cd /etc/apache2/sites-available \
 EXPOSE 80
 
 # Define the default command to run when the container starts
-CMD ["apache2-foreground"]
+CMD ["php-fpm"]
