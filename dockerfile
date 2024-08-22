@@ -24,8 +24,8 @@ COPY . /var/www/html/
 # Set direktori kerja
 WORKDIR /var/www/html/
 
-# Expose port 8181
-EXPOSE 8181
+# Expose port 80
+EXPOSE 80
 
 # Jalankan Apache server
 CMD ["apache2-foreground"]
