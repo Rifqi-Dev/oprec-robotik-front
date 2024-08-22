@@ -1,54 +1,31 @@
-# Use PHP 8.1.0 with FPM on Alpine
-FROM php:8.1.0-fpm-alpine
+# Use PHP 8.1.0 with Apache on Alpine
+FROM php:8.1.0-apache
 
-# Set environment variables for Composer
-ENV COMPOSER_PROCESS_TIMEOUT=2000
-ENV COMPOSER_ALLOW_SUPERUSER=1
-
-# Install necessary packages and extensions
-RUN apk add --no-cache \
-    nano \
+# Install dependensi dan ekstensi PHP yang dibutuhkan untuk CodeIgniter
+RUN apt-get update && apt-get install -y \
+    libpng-dev \
+    libjpeg-dev \
+    libfreetype6-dev \
     zip \
-    unzip \
-    git \
-    curl \
-    openssl \
-    libintl \
-    icu-dev \
-    && docker-php-ext-configure intl \
-    && docker-php-ext-install intl
+    unzip
 
-# Install Composer
-RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/bin --filename=composer
+# Install ekstensi GD dan mysqli
+#RUN docker-php-ext-configure gd --with-freetype-dir=/usr/include/ --with-jpeg-dir=/usr/include/ && docker-php-ext-install gd mysqli
 
-# Set the working directory
-WORKDIR /var/www/html
+# Aktifkan mod_rewrite untuk Apache
+RUN a2enmod rewrite
 
-# Download and install CodeIgniter
-RUN curl -L https://github.com/codeigniter4/appstarter/archive/refs/tags/v4.5.4.zip -o appstarter.zip \
-    && unzip appstarter.zip -d /var/www/html \
-    && mv /var/www/html/appstarter-4.5.4 /var/www/html/app \
-    && rm appstarter.zip \
-    && cd /var/www/html/app \
-    && composer install --no-progress --no-interaction
+# Set the ServerName to avoid warnings
+RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
 
-# Change ownership of the project files to the www-data user
-RUN chown -R www-data:www-data /var/www/html/app
+# Copy kode CodeIgniter ke dalam container
+COPY . /var/www/html/
 
-# Copy the Apache virtual host configuration (assuming you have a custom config file)
-COPY codeigniter.conf /etc/apache2/sites-available/
+# Set direktori kerja
+WORKDIR /var/www/html/
 
-# Enable the CodeIgniter site and reload Apache
-RUN a2ensite codeigniter.conf \
-    && service apache2 reload || true
-
-# Disable the default Apache site
-RUN cd /etc/apache2/sites-available \
-    && a2dissite 000-default.conf \
-    && service apache2 reload || true
-
-# Expose port 80 to the host
+# Expose port 80
 EXPOSE 80
 
-# Define the default command to run when the container starts
-CMD ["php-fpm"]
+# Jalankan Apache server
+CMD ["apache2-foreground"]
