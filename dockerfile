@@ -16,7 +16,7 @@ RUN composer create-project codeigniter4/appstarter app --prefer-dist --stabilit
 RUN chown -R www-data:www-data /var/www/html \
     && composer self-update
 
-COPY codeigniter.conf /etc/apache2/sites-available/
+# COPY codeigniter.conf /etc/apache2/sites-available/
 RUN a2ensite codeigniter.conf \
     && service apache2 reload || true
 
